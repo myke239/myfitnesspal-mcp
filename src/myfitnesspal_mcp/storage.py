@@ -12,9 +12,13 @@ def data_directory():
     return Path(__file__).absolute().parents[2] / "work" / "remote"
 
 
+def _is_junction(path: Path) -> bool:
+    check = getattr(path, "is_junction", None)
+    return check is not None and check()
+
+
 def restrict(path: Path) -> None:
-    is_junction = getattr(path, "is_junction", None)
-    if path.is_symlink() or (is_junction is not None and is_junction()):
+    if path.is_symlink() or _is_junction(path):
         raise ValueError("Session paths cannot be symlinks")
     if os.name != "nt":
         path.chmod(0o700 if path.is_dir() else 0o600)
@@ -90,7 +94,7 @@ class TokenStore:
                 output.flush()
                 os.fsync(output.fileno())
             restrict(temporary_path)
-            if self.path.is_symlink() or self.path.is_junction():
+            if self.path.is_symlink() or _is_junction(self.path):
                 raise ValueError("Session paths cannot be symlinks")
             temporary_path.replace(self.path)
         finally:
@@ -121,7 +125,7 @@ def session_lock(store):
     store.directory.mkdir(parents=True, exist_ok=True)
     restrict(store.directory)
     lockpath = store.directory / "request.lock"
-    if lockpath.is_symlink() or lockpath.is_junction():
+    if lockpath.is_symlink() or _is_junction(lockpath):
         raise ValueError("Unsafe lock path")
     with lockpath.open("a+b") as lock:
         restrict(lockpath)
@@ -158,3 +162,5 @@ def session_lock(store):
                 import fcntl
 
                 fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+
+
