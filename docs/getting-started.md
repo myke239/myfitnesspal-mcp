@@ -71,8 +71,9 @@ Ask your MCP client to call `connection_status`, then request a diary read for a
 
 ## Remote ChatGPT and mobile
 
-For remote access, use the [shared ngrok guide](shared-ngrok.md). It keeps Garmin and MyFitnessPal on one HTTPS hostname and routes them by distinct URL paths. Your computer must stay awake, Firefox must remain signed in, and the local gateway must be running. Local stdio setup does not configure remote ChatGPT access.
+For remote access, use the [shared ngrok guide](shared-ngrok.md). It keeps Garmin and MyFitnessPal on one HTTPS hostname and routes them by distinct URL paths. The combined gateway currently runs on Windows because its encrypted OAuth state uses Windows DPAPI. Your computer must stay awake, Firefox must remain signed in, and the local gateway must be running. Local stdio setup does not configure remote ChatGPT access.
 
 ## Update or uninstall
 
 Run the installer again to upgrade in place. To remove the installation, stop the server and remove `%LOCALAPPDATA%\MyFitnessPalMCP` on Windows or `~/.local/share/myfitnesspal-mcp` on macOS/Linux. Remove any client configuration entry you added. User-specific remote grants and state are separate; use the connector's documented reset command before removing remote state if you want to revoke it.
+

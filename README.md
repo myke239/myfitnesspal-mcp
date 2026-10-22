@@ -35,7 +35,7 @@ You can run Garmin and MyFitnessPal through the **same ngrok HTTPS hostname**. K
 
 ## Platforms and releases
 
-The installer supports Windows PowerShell, macOS, and Linux with Python 3.11+. Release artifacts include the platform-appropriate installer scripts, a wheel, source archive, and SHA-256 checksums. The Python MCP server runs in each platform's local interpreter; browser cookie access depends on supported browsers and OS keychain protections. Current bundled plugin metadata is a Codex plugin; other clients can use the printed stdio configuration.
+The local stdio connector and installer support Windows, macOS, and Linux with Python 3.11+. Release artifacts include OS-specific installer scripts, a wheel, source archives, and SHA-256 checksums. Browser cookie access depends on supported browsers and OS keychain protections. The combined Garmin + MyFitnessPal HTTPS gateway currently uses Windows DPAPI and its supplied PowerShell launcher, so remote ChatGPT/mobile setup is Windows-hosted today. Current bundled plugin metadata is a Codex plugin; other clients can use the printed stdio configuration.
 
 ## Development
 
@@ -51,3 +51,4 @@ python -m build
 ## License and attribution
 
 Source code is MIT licensed. Das Kreb branding is included from the companion [Garmin Connect MCP](https://github.com/myke239/garmin-connect-mcp) project. Third-party software notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+

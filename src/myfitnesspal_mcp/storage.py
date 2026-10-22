@@ -13,7 +13,8 @@ def data_directory():
 
 
 def restrict(path: Path) -> None:
-    if path.is_symlink() or path.is_junction():
+    is_junction = getattr(path, "is_junction", None)
+    if path.is_symlink() or (is_junction is not None and is_junction()):
         raise ValueError("Session paths cannot be symlinks")
     if os.name != "nt":
         path.chmod(0o700 if path.is_dir() else 0o600)
