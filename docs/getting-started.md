@@ -19,7 +19,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\install.ps1
 ```
 
-The script installs into `%LOCALAPPDATA%\MyFitnessPalMCP`, creates an isolated Python environment, and does not change machine-wide Python or client configuration. Use the printed verification command. If PowerShell cannot find Python, install Python 3.11+ from [python.org](https://www.python.org/downloads/windows/) and enable the Python launcher.
+The script installs into `%LOCALAPPDATA%\MyFitnessPalMCP` and creates an isolated Python environment without changing machine-wide Python or client configuration. It checks the versions registered with the Windows Python launcher and selects the newest Python 3.11 or newer. This also works when an older Python is the default for `py -3`. Use the printed verification command. If no supported version is found, install Python 3.11+ from [python.org](https://www.python.org/downloads/windows/) with the Python launcher enabled, then rerun the installer. If you prefer a specific interpreter, set `$env:PYTHON` to its full executable path before running `install.ps1`.
 
 ### macOS
 
