@@ -15,7 +15,7 @@ jobs:
         python: ['3.11', '3.12', '3.13']
         exclude:
           - os: macos-latest
-          python: '3.11'
+            python: '3.11'
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -36,8 +36,3 @@ jobs:
       - name: Check wheel contents exclude local data
         shell: bash
         run: python -c "import glob,zipfile; z=zipfile.ZipFile(glob.glob('dist/*.whl')[0]); assert not any(n.startswith(('data/','work/')) for n in z.namelist())"
-
-
-
-
-
