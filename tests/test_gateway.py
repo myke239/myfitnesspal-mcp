@@ -19,7 +19,7 @@ def test_shared_gateway_oauth_and_routing(tmp_path, monkeypatch):
 
     def garmin(request):
         requests.append(request)
-        if request.url.path == "/mcp":
+        if request.url.path in {"/mcp", "/mcp/garmin-connect/"}:
             return httpx.Response(
                 401, stream=httpx.ByteStream(b"Garmin requires its own token")
             )
@@ -145,6 +145,8 @@ def test_shared_gateway_oauth_and_routing(tmp_path, monkeypatch):
         )
         assert client.post("/token", content=b"x" * 16385).status_code == 413
         assert client.post("/mcp", content=b"x" * 20000).status_code == 401
+        assert client.post("/mcp/garmin-connect/", content=b"x" * 20000).status_code == 401
+        assert client.post("/mcp/garmin-connect/", content=b"x" * (3 * 1024 * 1024 + 1)).status_code == 413
         assert (
             client.get(
                 "/health", headers={"x-forwarded-host": "evil.example"}

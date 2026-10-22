@@ -47,13 +47,13 @@ The script installs into `~/.local/share/myfitnesspal-mcp`. Install Python 3.11+
 
 ## 3. Sign in and verify
 
-Sign in to MyFitnessPal in Firefox. Run the command printed by the installer, typically:
+Sign in to MyFitnessPal in Firefox. Run the verify command printed by the installer. On macOS/Linux, it is typically:
 
 ```sh
-myfitnesspal-mcp verify --browser firefox
+~/.local/share/myfitnesspal-mcp/myfitnesspal-mcp verify --browser firefox
 ```
 
-For Windows, use the full path printed by the installer if the command is not on PATH. You can select Edge or Chrome with `--browser edge` or `--browser chrome`. Firefox is recommended on Windows because Chrome cookie decryption may require administrative access. Authentication is lazy: server discovery can work before you verify, but account tools need a valid browser session.
+On Windows, use the full PowerShell command printed by the installer; it invokes the installed environment's Python directly. You can select Edge or Chrome with `--browser edge` or `--browser chrome`. Firefox is recommended on Windows because Chrome cookie decryption may require administrative access. Authentication is lazy: server discovery can work before you verify, but account tools need a valid browser session.
 
 Alternatively set `MFP_COOKIE_FILE` to a local Netscape-format cookie export. Protect that file and never commit or share it.
 

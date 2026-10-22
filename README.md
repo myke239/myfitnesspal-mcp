@@ -15,7 +15,7 @@ A local-first MCP server for MyFitnessPal. Connect through stdio on Windows, mac
 1. Install Python 3.11 or newer.
 2. Download the installer for your operating system from [the latest release](https://github.com/myke239/myfitnesspal-mcp/releases/latest): `install.ps1` for Windows, or `install.sh` for macOS/Linux.
 3. Run the installer. It creates an isolated environment, installs the signed-off release wheel, and prints the client setup instructions.
-4. Sign in to MyFitnessPal in Firefox, then run `myfitnesspal-mcp verify --browser firefox`.
+4. Sign in to MyFitnessPal in Firefox, then run the verify command printed by the installer.
 5. Add the printed MCP server configuration to your client and restart/reload its tools.
 
 See the illustrated [step-by-step installation guide](docs/getting-started.md). No password is stored by this project. Your browser session cookies are read locally; exported cookie files must be protected like passwords.
@@ -31,7 +31,7 @@ Writes are available by default locally. Remote write access requires an explici
 
 ## One ngrok HTTPS address for multiple connectors
 
-You can run Garmin and MyFitnessPal through the **same ngrok HTTPS hostname**. Keep Garmin at its existing `/mcp` endpoint. MyFitnessPal gets its own distinct path: `/myfitnesspal/mcp`. The URLs share scheme, hostname, and ngrok tunnel; each connector uses its own ending path and isolated OAuth state. Do not start a second tunnel or substitute a second hostname for this setup. Follow [Shared ngrok setup](docs/shared-ngrok.md).
+You can run Garmin and MyFitnessPal through the **same ngrok HTTPS hostname**. Garmin uses `/mcp/garmin-connect/`; MyFitnessPal uses `/myfitnesspal/mcp`. The URLs share scheme, hostname, and ngrok tunnel; each connector uses its own ending path and isolated OAuth state. Do not start a second tunnel or substitute a second hostname for this setup. Follow [Shared ngrok setup](docs/shared-ngrok.md).
 
 ## Platforms and releases
 

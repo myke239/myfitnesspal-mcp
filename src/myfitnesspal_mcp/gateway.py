@@ -118,7 +118,7 @@ def create_gateway(
 
     # Both connectors retain their own inner boundary; cap requests before proxy buffering.
     return Boundary(
-        dispatch, origin, port, PREFIX, mcp_paths={"/mcp", PREFIX + "/mcp"}
+        dispatch, origin, port, PREFIX, mcp_paths={"/mcp", "/mcp/garmin-connect/", PREFIX + "/mcp"}
     ), provider
 
 
@@ -185,12 +185,12 @@ def main():
                     raise RuntimeError("Garmin backend failed to start")
                 try:
                     response = client.get(
-                        f"http://127.0.0.1:{args.garmin_port}/.well-known/oauth-authorization-server",
+                        f"http://127.0.0.1:{args.garmin_port}/.well-known/oauth-authorization-server/mcp/garmin-connect",
                         headers={"Host": urlsplit(origin).netloc},
                     )
                     if (
                         response.status_code == 200
-                        and response.json()["issuer"].rstrip("/") == origin
+                        and response.json()["issuer"].rstrip("/") == origin + "/mcp/garmin-connect"
                     ):
                         break
                 except httpx.RequestError:
@@ -217,12 +217,12 @@ def main():
                 {
                     "pid": os.getpid(),
                     "garmin_pid": child.pid,
-                    "garmin_url": origin + "/mcp",
+                    "garmin_url": origin + "/mcp/garmin-connect/",
                     "myfitnesspal_url": origin + PREFIX + "/mcp",
                 }
             )
         )
-        print("Garmin: " + origin + "/mcp", flush=True)
+        print("Garmin: " + origin + "/mcp/garmin-connect/", flush=True)
         print("MyFitnessPal: " + origin + PREFIX + "/mcp", flush=True)
         config = uvicorn.Config(
             app,
