@@ -20,8 +20,9 @@ from .remote import Boundary, create_http_app, public_origin
 from .storage import TokenStore, data_directory
 
 PREFIX = "/myfitnesspal"
+MFP_MCP_PATH = "/mcp/myfitnesspal"
 MFP_METADATA = {
-    "/.well-known/oauth-protected-resource/myfitnesspal/mcp",
+    "/.well-known/oauth-protected-resource/mcp/myfitnesspal",
     "/.well-known/oauth-authorization-server/myfitnesspal",
 }
 HOP_HEADERS = {
@@ -41,7 +42,14 @@ def create_gateway(
     origin, garmin_port=8787, port=8788, directory=None, service=None, transport=None
 ):
     origin = public_origin(origin)
-    mfp, provider = create_http_app(origin, port, directory, service, prefix=PREFIX)
+    mfp, provider = create_http_app(
+        origin,
+        port,
+        directory,
+        service,
+        prefix=PREFIX,
+        resource_path=MFP_MCP_PATH,
+    )
 
     @asynccontextmanager
     async def lifespan(app):
@@ -67,7 +75,10 @@ def create_gateway(
         }
         headers["host"] = urlsplit(origin).netloc
         path = request.url.path
-        url = f"http://127.0.0.1:{garmin_port}{path}"
+        backend_path = (
+            "/mcp/garmin-connect/" if path == "/mcp/garmin-connect" else path
+        )
+        url = f"http://127.0.0.1:{garmin_port}{backend_path}"
         if request.url.query:
             url += "?" + request.url.query
         outgoing = request.app.state.backend.build_request(
@@ -111,14 +122,22 @@ def create_gateway(
     async def dispatch(scope, receive, send):
         path = scope.get("path", "")
         if scope["type"] == "http" and (
-            path == PREFIX or path.startswith(PREFIX + "/") or path in MFP_METADATA
+            path == PREFIX
+            or path.startswith(PREFIX + "/")
+            or path == MFP_MCP_PATH
+            or path.startswith(MFP_MCP_PATH + "/")
+            or path in MFP_METADATA
         ):
             return await mfp(scope, receive, send)
         return await backend(scope, receive, send)
 
     # Both connectors retain their own inner boundary; cap requests before proxy buffering.
     return Boundary(
-        dispatch, origin, port, PREFIX, mcp_paths={"/mcp", "/mcp/garmin-connect/", PREFIX + "/mcp"}
+        dispatch,
+        origin,
+        port,
+        PREFIX,
+        mcp_paths={"/mcp", "/mcp/garmin-connect", "/mcp/garmin-connect/", MFP_MCP_PATH},
     ), provider
 
 
@@ -217,13 +236,13 @@ def main():
                 {
                     "pid": os.getpid(),
                     "garmin_pid": child.pid,
-                    "garmin_url": origin + "/mcp/garmin-connect/",
-                    "myfitnesspal_url": origin + PREFIX + "/mcp",
+                    "garmin_url": origin + "/mcp/garmin-connect",
+                    "myfitnesspal_url": origin + MFP_MCP_PATH,
                 }
             )
         )
-        print("Garmin: " + origin + "/mcp/garmin-connect/", flush=True)
-        print("MyFitnessPal: " + origin + PREFIX + "/mcp", flush=True)
+        print("Garmin: " + origin + "/mcp/garmin-connect", flush=True)
+        print("MyFitnessPal: " + origin + MFP_MCP_PATH, flush=True)
         config = uvicorn.Config(
             app,
             log_level="warning",

@@ -31,7 +31,7 @@ Writes are available by default locally. Remote write access requires an explici
 
 ## One ngrok HTTPS address for multiple connectors
 
-You can run Garmin and MyFitnessPal through the **same ngrok HTTPS hostname**. Garmin uses `/mcp/garmin-connect/`; MyFitnessPal uses `/myfitnesspal/mcp`. The URLs share scheme, hostname, and ngrok tunnel; each connector uses its own ending path and isolated OAuth state. Do not start a second tunnel or substitute a second hostname for this setup. Follow [Shared ngrok setup](docs/shared-ngrok.md).
+You can run Garmin and MyFitnessPal through the **same ngrok HTTPS hostname**. Garmin uses `/mcp/garmin-connect`; MyFitnessPal uses `/mcp/myfitnesspal`. The URLs share scheme, hostname, and ngrok tunnel; each connector uses its own ending path and isolated OAuth state. Do not start a second tunnel or substitute a second hostname for this setup. Follow [Shared ngrok setup](docs/shared-ngrok.md).
 
 ## Platforms and releases
 

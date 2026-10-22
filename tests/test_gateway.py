@@ -10,7 +10,8 @@ from myfitnesspal_mcp.service import Service
 
 ORIGIN = "https://shared.example.com"
 PREFIX = "/myfitnesspal"
-RESOURCE = ORIGIN + PREFIX + "/mcp"
+MFP_PATH = "/mcp/myfitnesspal"
+RESOURCE = ORIGIN + MFP_PATH
 CALLBACK = "https://chatgpt.com/connector/oauth/test"
 
 
@@ -19,7 +20,11 @@ def test_shared_gateway_oauth_and_routing(tmp_path, monkeypatch):
 
     def garmin(request):
         requests.append(request)
-        if request.url.path in {"/mcp", "/mcp/garmin-connect/"}:
+        if request.url.path in {
+            "/mcp",
+            "/mcp/garmin-connect",
+            "/mcp/garmin-connect/",
+        }:
             return httpx.Response(
                 401, stream=httpx.ByteStream(b"Garmin requires its own token")
             )
@@ -43,16 +48,17 @@ def test_shared_gateway_oauth_and_routing(tmp_path, monkeypatch):
             == ORIGIN
         )
         assert requests[-1].headers["host"] == "shared.example.com"
-        response = client.get(PREFIX + "/mcp")
+        response = client.get(MFP_PATH)
         assert response.status_code == 401
         assert (
-            "/.well-known/oauth-protected-resource/myfitnesspal/mcp"
+            "/.well-known/oauth-protected-resource/mcp/myfitnesspal"
             in response.headers["www-authenticate"]
         )
         metadata = client.get(
-            "/.well-known/oauth-protected-resource/myfitnesspal/mcp"
+            "/.well-known/oauth-protected-resource/mcp/myfitnesspal"
         ).json()
         assert metadata["resource"] == RESOURCE
+        assert client.get(PREFIX + "/mcp").status_code == 404
         assert metadata["authorization_servers"] == [ORIGIN + PREFIX]
         auth = client.get("/.well-known/oauth-authorization-server/myfitnesspal").json()
         assert auth["issuer"] == ORIGIN + PREFIX
@@ -119,7 +125,7 @@ def test_shared_gateway_oauth_and_routing(tmp_path, monkeypatch):
             "Accept": "application/json, text/event-stream",
         }
         result = client.post(
-            PREFIX + "/mcp",
+            MFP_PATH,
             headers=headers,
             json={
                 "jsonrpc": "2.0",
@@ -135,7 +141,7 @@ def test_shared_gateway_oauth_and_routing(tmp_path, monkeypatch):
         assert client.get("/mcp", headers=headers).status_code == 401
         assert (
             client.get(
-                PREFIX + "/mcp", headers={"Authorization": "Bearer garmin-token"}
+                MFP_PATH, headers={"Authorization": "Bearer garmin-token"}
             ).status_code
             == 401
         )
@@ -145,8 +151,18 @@ def test_shared_gateway_oauth_and_routing(tmp_path, monkeypatch):
         )
         assert client.post("/token", content=b"x" * 16385).status_code == 413
         assert client.post("/mcp", content=b"x" * 20000).status_code == 401
-        assert client.post("/mcp/garmin-connect/", content=b"x" * 20000).status_code == 401
-        assert client.post("/mcp/garmin-connect/", content=b"x" * (3 * 1024 * 1024 + 1)).status_code == 413
+        assert client.post(MFP_PATH, content=b"x" * 20000).status_code == 401
+        assert (
+            client.post("/mcp/garmin-connect", content=b"x" * 20000).status_code
+            == 401
+        )
+        assert requests[-1].url.path == "/mcp/garmin-connect/"
+        assert (
+            client.post(
+                "/mcp/garmin-connect", content=b"x" * (3 * 1024 * 1024 + 1)
+            ).status_code
+            == 413
+        )
         assert (
             client.get(
                 "/health", headers={"x-forwarded-host": "evil.example"}

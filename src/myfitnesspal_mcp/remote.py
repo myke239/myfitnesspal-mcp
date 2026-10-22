@@ -103,13 +103,16 @@ class OwnerRefresh(RefreshToken):
 
 
 class OwnerProvider:
-    def __init__(self, origin, directory=None, prefix=""):
+    def __init__(self, origin, directory=None, prefix="", resource_path=None):
         self.origin = public_origin(origin)
         if prefix not in ("", "/myfitnesspal"):
             raise ValueError("Unsupported connector prefix")
         self.prefix = prefix
         self.base_url = self.origin + prefix
-        self.resource = self.base_url + "/mcp"
+        self.resource_path = resource_path or prefix + "/mcp"
+        if not self.resource_path.startswith("/") or self.resource_path.endswith("/"):
+            raise ValueError("Invalid MCP resource path")
+        self.resource = self.origin + self.resource_path
         self.store = TokenStore(directory or data_directory() / "remote-oauth")
 
     @contextmanager
@@ -121,6 +124,7 @@ class OwnerProvider:
                 else {
                     "origin": self.origin,
                     "prefix": self.prefix,
+                    "resource_path": self.resource_path,
                     "clients": {},
                     "pending": {},
                     "codes": {},
@@ -128,9 +132,14 @@ class OwnerProvider:
                     "refresh": {},
                 }
             )
-            if state["origin"] != self.origin or state.get("prefix", "") != self.prefix:
+            if (
+                state["origin"] != self.origin
+                or state.get("prefix", "") != self.prefix
+                or state.get("resource_path", state.get("prefix", "") + "/mcp")
+                != self.resource_path
+            ):
                 raise ValueError(
-                    "Public origin changed. Revoke/reset remote connections first."
+                    "Public origin or MCP resource changed. Revoke/reset remote connections first."
                 )
             now = time.time()
             for collection in ("pending", "codes", "access", "refresh"):
@@ -436,7 +445,7 @@ class Boundary:
             # SDK 1.30 does not pass the requested token resource to the provider.
             # Refuse a resource override here; issued tokens remain bound to /mcp.
             if "resource" in form and form["resource"] != [
-                self.origin + self.prefix + "/mcp"
+                self.resource
             ]:
                 return await JSONResponse({"error": "invalid_target"}, status_code=400)(
                     scope, receive, send
@@ -502,8 +511,10 @@ class Boundary:
         await self.app(scope, replay, secure_send)
 
 
-def create_http_app(origin, port=8788, directory=None, service=None, prefix=""):
-    provider = OwnerProvider(origin, directory, prefix)
+def create_http_app(
+    origin, port=8788, directory=None, service=None, prefix="", resource_path=None
+):
+    provider = OwnerProvider(origin, directory, prefix, resource_path)
     auth = AuthSettings(
         issuer_url=AnyHttpUrl(provider.base_url),
         resource_server_url=AnyHttpUrl(provider.resource),
@@ -530,7 +541,7 @@ def create_http_app(origin, port=8788, directory=None, service=None, prefix=""):
         write_directory=provider.store.directory / "writes"
         if directory is not None
         else None,
-        streamable_http_path=prefix + "/mcp",
+        streamable_http_path=provider.resource_path,
         host="127.0.0.1",
         port=port,
         auth=auth,
@@ -593,7 +604,9 @@ def create_http_app(origin, port=8788, directory=None, service=None, prefix=""):
                 break
         else:
             raise RuntimeError("Expected protected-resource metadata route missing")
-    return Boundary(app, provider.origin, port, prefix), provider
+    return Boundary(
+        app, provider.origin, port, prefix, mcp_paths={provider.resource_path}
+    ), provider
 
 
 def main():
@@ -621,16 +634,22 @@ def main():
         origin = json.loads(store.load())["origin"]
     if not origin:
         raise SystemExit("Provide --public-url https://your-tunnel-host")
-    prefix = json.loads(store.load()).get("prefix", "") if store.exists() else ""
+    saved = json.loads(store.load()) if store.exists() else {}
+    prefix = saved.get("prefix", "")
+    resource_path = saved.get("resource_path")
     if args.command == "approve":
-        OwnerProvider(origin, prefix=prefix).approve(args.ticket)
+        OwnerProvider(origin, prefix=prefix, resource_path=resource_path).approve(
+            args.ticket
+        )
         print("Approved. Return to the browser and select Continue.")
     else:
         if not 1024 <= args.port <= 65535:
             raise SystemExit("Use an unprivileged local port")
         import uvicorn
 
-        app, _ = create_http_app(origin, args.port, prefix=prefix)
+        app, _ = create_http_app(
+            origin, args.port, prefix=prefix, resource_path=resource_path
+        )
         uvicorn.run(
             app,
             host="127.0.0.1",
