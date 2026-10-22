@@ -1,0 +1,28 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        python: ['3.11', '3.12', '3.13']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m pytest -q
+      - run: python -m ruff check src tests
+      - run: python -m build
+      - name: Check wheel contents exclude local data
+        shell: bash
+        run: python -c "import glob,zipfile; z=zipfile.ZipFile(glob.glob('dist/*.whl')[0]); assert not any(n.startswith(('data/','work/')) for n in z.namelist())"

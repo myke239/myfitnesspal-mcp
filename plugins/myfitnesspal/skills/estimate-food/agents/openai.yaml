@@ -1,0 +1,4 @@
+interface:
+  display_name: "Estimate food photos"
+  short_description: "Estimate photo portions and nutrition"
+  default_prompt: "Use $estimate-food to estimate the food in this attached photo."

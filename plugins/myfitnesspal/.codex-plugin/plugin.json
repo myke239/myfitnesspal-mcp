@@ -1,0 +1,23 @@
+{
+  "name": "myfitnesspal",
+  "version": "0.5.0",
+  "description": "Estimate attached food photos and read or update MyFitnessPal diary entries, foods, water, measurements, goals and fasting.",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "MyFitnessPal",
+    "shortDescription": "Estimate food photos and manage MyFitnessPal",
+    "longDescription": "Discover all tools and input schemas with get_myfitnesspal_tool_guide. Use estimate_food_from_attachment for attached or pasted ChatGPT photos. Read diaries and base goals, match foods and servings, write requested changes and read back. Verification status is available through get_sdk_capabilities.",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Estimate the food in this attached photo",
+      "Log 104 g of cooked chicken breast for lunch",
+      "Summarize my nutrition over the last week",
+      "Show my food diary for yesterday"
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "myfitnesspal-mcp"
+version = "0.5.0"
+license-files = ["THIRD_PARTY_NOTICES.md"]
+description = "Local MyFitnessPal diary and nutrition MCP tools"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["mcp==1.30.0", "myfitnesspal==2.1.2", "browser-cookie3==0.20.1", "tzdata>=2025.2", "httpx>=0.28,<1", "truststore==0.10.5", "Pillow==12.3.0"]
+
+[project.optional-dependencies]
+benchmark = ["Pillow==12.3.0", "truststore==0.10.5", "requests>=2.32,<3", "imageio-ffmpeg==0.6.0"]
+dev = ["pytest>=8,<10", "ruff>=0.12,<1", "build>=1,<2"]
+remote = ["ngrok==1.7.0", "pywin32>=310; sys_platform == 'win32'"]
+
+[project.scripts]
+myfitnesspal-mcp = "myfitnesspal_mcp.cli:main"
+
+[tool.hatch.build]
+exclude = ["/data", "/work"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/myfitnesspal_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "--basetemp=work/pytest-tmp"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

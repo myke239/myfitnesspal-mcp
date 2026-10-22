@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+dist/
+work/
+.env
+.env.*
+*.cookies.txt
+cookies.txt
+.DS_Store
+Thumbs.db
+# Licensed benchmark assets and blind evaluation labels remain local.
+/data/

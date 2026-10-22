@@ -1,0 +1,4 @@
+interface:
+  display_name: "Manage MyFitnessPal"
+  short_description: "Log meals and update MyFitnessPal records"
+  default_prompt: "Use $manage-myfitnesspal to log my meal and verify the diary entry."

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "myfitnesspal": {
+      "command": "python",
+      "args": ["-m", "myfitnesspal_mcp.cli", "serve"],
+      "env": {"MFP_BROWSER": "firefox"},
+      "startup_timeout_sec": 30,
+      "tool_timeout_sec": 240
+    }
+  }
+}
+
