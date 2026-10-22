@@ -138,6 +138,7 @@ def create_gateway(
         port,
         PREFIX,
         mcp_paths={"/mcp", "/mcp/garmin-connect", "/mcp/garmin-connect/", MFP_MCP_PATH},
+        resource=provider.resource,
     ), provider
 
 

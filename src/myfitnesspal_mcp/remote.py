@@ -399,10 +399,11 @@ class OwnerProvider:
 class Boundary:
     """Apply host/origin checks, bounded bodies and a process-wide request rate cap."""
 
-    def __init__(self, app, origin, port, prefix="", mcp_paths=None):
+    def __init__(self, app, origin, port, prefix="", mcp_paths=None, resource=None):
         self.prefix = prefix
         self.mcp_paths = mcp_paths or {prefix + "/mcp"}
         self.app, self.origin = app, origin
+        self.resource = resource or origin + prefix + "/mcp"
         self.hosts = {urlsplit(origin).netloc, f"127.0.0.1:{port}", f"localhost:{port}"}
         self.window, self.count = time.monotonic(), 0
 
@@ -443,7 +444,7 @@ class Boundary:
                 bytes(body).decode("utf-8", errors="replace"), keep_blank_values=True
             )
             # SDK 1.30 does not pass the requested token resource to the provider.
-            # Refuse a resource override here; issued tokens remain bound to /mcp.
+            # Refuse resource overrides; issued tokens stay bound to this connector.
             if "resource" in form and form["resource"] != [
                 self.resource
             ]:
@@ -605,7 +606,12 @@ def create_http_app(
         else:
             raise RuntimeError("Expected protected-resource metadata route missing")
     return Boundary(
-        app, provider.origin, port, prefix, mcp_paths={provider.resource_path}
+        app,
+        provider.origin,
+        port,
+        prefix,
+        mcp_paths={provider.resource_path},
+        resource=provider.resource,
     ), provider
 
 
