@@ -2,25 +2,46 @@
 
 ## Windows
 
-1. Install and sign in to the [Codex desktop app](https://developers.openai.com/codex/quickstart), and install Firefox, Chrome, or Edge.
-2. Download and open [MyFitnessPal MCP Setup](https://github.com/myke239/myfitnesspal-mcp/releases/latest/download/myfitnesspal-mcp-windows-x64-setup.exe). If Windows asks, choose **More info → Run anyway**.
-3. Click **Begin Install** in the Windows installer.
+1. Download and open [MyFitnessPal MCP Setup](https://github.com/myke239/myfitnesspal-mcp/releases/latest/download/myfitnesspal-mcp-windows-x64-setup.exe). If Windows asks, choose **More info → Run anyway**.
+2. Click **Begin Install** in the Windows installer.
 
    ![Windows installer ready-to-install screen](images/windows-installer-welcome.png)
 
-4. When the setup app opens, click **Begin Install**.
+3. When the setup app opens, click **Begin Install**.
 
    ![MyFitnessPal MCP setup welcome screen](images/windows-setup-welcome.png)
 
-5. Keep the browser where you use MyFitnessPal selected, then click **Open MyFitnessPal**.
+4. Choose the browser where you use MyFitnessPal, then click **Open MyFitnessPal**. Sign in and return to setup.
 
    ![Choose the browser used for MyFitnessPal](images/windows-setup-browser.png)
 
-6. Sign in in the browser. Return to setup and click **I’m signed in — Continue**.
+5. Click **Verify MyFitnessPal**. When verification succeeds, choose **ChatGPT (including phone access)** or **Codex**.
 
    ![MyFitnessPal sign-in confirmation step](images/windows-setup-signin.png)
 
-7. When you see **You’re all set**, close and reopen Codex and start a new chat.
+   ![Choose ChatGPT or Codex](images/windows-setup-client.png)
+
+### ChatGPT setup
+
+1. Choose **Start the shared gateway on my Garmin HTTPS address**, then click **Start shared server**. If the shared gateway is already running, choose **Use a running MyFitnessPal HTTPS address** instead. MyFitnessPal uses `/mcp/myfitnesspal`; Garmin keeps `/mcp/garmin-connect`.
+
+   ![Choose how to set up the shared HTTPS address](images/windows-setup-hosting.png)
+
+   ![Start the shared MCP server](images/windows-setup-server.png)
+2. Click **Copy URL and open ChatGPT**. In Plugins, choose **Add custom MCP server**, paste the copied URL, choose OAuth / Dynamic Client Registration, and start the connection.
+3. Copy the connection code shown in the browser and paste it into setup. Review the access, then click **Approve connection**.
+4. Return to the browser and click **Continue**. Finish installing the connector in ChatGPT, return to setup, then click **Verify connection**.
+
+   ![Copy the MyFitnessPal server URL into ChatGPT](images/windows-setup-chatgpt.png)
+
+**Installed correctly:** Setup shows **You’re connected**. In a new ChatGPT chat, ask: “Show my MyFitnessPal food diary for yesterday.”
+
+The shared gateway needs Garmin Connect MCP installed and connected on this PC. The wizard switches the existing Garmin tunnel to one shared gateway so both connectors use the same HTTPS address. Keep this PC awake for ChatGPT access.
+
+### Codex setup
+
+1. Choose **Codex**, then click **Connect Codex**.
+2. When setup shows **You’re connected**, close and reopen Codex and start a new chat.
 
 **Installed correctly:** MyFitnessPal appears in Codex’s plugin list. In a new chat, ask: “Show my MyFitnessPal food diary for yesterday.”
 
