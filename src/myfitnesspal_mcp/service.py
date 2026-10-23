@@ -3,9 +3,11 @@
 import math
 import os
 import re
+import sys
 import time
 from datetime import date, datetime, timedelta
 from http.cookiejar import MozillaCookieJar
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 
@@ -33,6 +35,59 @@ def page(items, cursor=0, limit=100):
 
 class AccessError(RuntimeError):
     """Sanitized upstream failure safe to return to a tool caller."""
+
+
+def _browser_cookie_profiles(browser: str) -> list[Path]:
+    """Find cookie databases from every installed browser profile on Windows.
+
+    browser-cookie3's default Firefox lookup selects one profile only. People
+    commonly keep MyFitnessPal signed in on a non-default profile, so include
+    all profiles and let the upstream verifier decide which session works.
+    """
+    if sys.platform != "win32":
+        return []
+    roaming = Path(os.environ.get("APPDATA", ""))
+    local = Path(os.environ.get("LOCALAPPDATA", ""))
+    if browser == "firefox":
+        roots = [roaming / "Mozilla" / "Firefox" / "Profiles"]
+        return [p for root in roots for p in root.glob("*/cookies.sqlite") if p.is_file()]
+    vendor = {"chrome": "Google\\Chrome", "edge": "Microsoft\\Edge"}.get(browser)
+    if not vendor:
+        return []
+    user_data = local / vendor / "User Data"
+    if not user_data.is_dir():
+        return []
+    return [
+        p
+        for profile in user_data.iterdir()
+        if profile.is_dir()
+        for p in (profile / "Network" / "Cookies", profile / "Cookies")
+        if p.is_file()
+    ]
+
+
+def _load_browser_cookies(loader, browser: str, domain: str):
+    """Load cookies from all available Windows profiles, with a normal fallback."""
+    profiles = _browser_cookie_profiles(browser)
+    if not profiles:
+        return loader(domain_name=domain)
+    combined = None
+    errors = []
+    for profile in profiles:
+        try:
+            jar = loader(cookie_file=str(profile), domain_name=domain)
+            if combined is None:
+                combined = jar
+            else:
+                for cookie in jar:
+                    combined.set_cookie(cookie)
+        except Exception as error:
+            errors.append(error)
+    if combined is not None:
+        return combined
+    if errors:
+        raise errors[0]
+    return loader(domain_name=domain)
 
 
 def parse_date(value: str) -> date:
@@ -85,7 +140,9 @@ def create_client():
         if browser not in loaders:
             raise ValueError("MFP_BROWSER must be chrome, edge, or firefox.")
         try:
-            jar = loaders[browser](domain_name="myfitnesspal.com")
+            jar = _load_browser_cookies(
+                loaders[browser], browser, "myfitnesspal.com"
+            )
         except Exception as error:
             if type(error).__name__ == "RequiresAdminError":
                 raise AccessError(
@@ -139,13 +196,28 @@ class Service:
         except AccessError:
             self._client = None
             raise
-        except Exception:
+        except Exception as error:
             self._client = None
+            if type(error).__name__ == "MyfitnesspalLoginError":
+                raise AccessError(
+                    "MyFitnessPal rejected the cookies found in the selected "
+                    "browser profiles. Check that the signed-in profile is the "
+                    "one opened by the installer, then try again."
+                ) from None
+            status_code = getattr(error, "status_code", None)
+            if status_code is None and type(error).__name__ == "MyfitnesspalRequestFailed":
+                match = re.search(r"status code:\s*(\d{3})", str(error), re.IGNORECASE)
+                status_code = int(match.group(1)) if match else None
+            if status_code == 403:
+                raise AccessError(
+                    "MyFitnessPal returned HTTP 403 while checking the browser "
+                    "session. The cookies were read, but MyFitnessPal denied "
+                    "the request; switching browsers may not resolve this."
+                ) from None
             raise AccessError(
-                "MyFitnessPal access failed. Sign in locally to the selected "
-                "browser, or refresh MFP_COOKIE_FILE. Browser cookie protection, "
-                "expired sessions, rate limits, and upstream changes can block "
-                "access. No account change was attempted."
+                "MyFitnessPal access failed while checking the selected browser "
+                "profiles. Confirm the browser profile is signed in and try "
+                "again. No account change was attempted."
             ) from None
 
     def connection_status(self):
