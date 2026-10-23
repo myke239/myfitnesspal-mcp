@@ -6,10 +6,28 @@ Use one ngrok HTTPS hostname and one tunnel for both connectors. They are routed
 | --- | --- |
 | Garmin Connect | `https://YOUR-NGROK-HOST/mcp/garmin-connect` |
 | MyFitnessPal | `https://YOUR-NGROK-HOST/mcp/myfitnesspal` |
+| WHOOP (optional) | `https://YOUR-NGROK-HOST/mcp/whoop/` |
 
 Replace only `YOUR-NGROK-HOST` with the current hostname shown by ngrok. Keep each path ending exactly as shown. Both URLs share the same scheme, hostname, and tunnel. MyFitnessPal has its own OAuth endpoints and scopes (`myfitnesspal:read`, `myfitnesspal:write`); neither connector uses the other's OAuth grants or account state.
 
 ## Start the combined gateway (Windows)
+
+### Optional WHOOP backend
+
+WHOOP can share this same hostname using its separately authorized `/mcp/whoop/`
+resource. Start WHOOP on an unused loopback port before enabling its proxy routes:
+
+```powershell
+& '<WHOOP Python>' -m whoop_mcp.cli remote serve --shared-host --public-url https://YOUR-HOST --port 8789
+```
+
+Then add `--whoop-port 8789` to the gateway command below (or `-WhoopPort 8789`
+with the PowerShell launcher). The WHOOP process is managed independently; the
+gateway retains its existing Garmin child lifecycle. No second ngrok tunnel is
+started. Existing Garmin and MyFitnessPal grants are preserved. WHOOP has its own
+discovery metadata, consent, resource-bound tokens and encrypted grant store.
+Use the trailing slash in its ChatGPT connection URL: `https://YOUR-HOST/mcp/whoop/`.
+An unavailable WHOOP backend returns 503 without rerouting its requests to Garmin.
 
 This gateway currently runs on Windows. Install MyFitnessPal with the [release installer](getting-started.md), and make sure Garmin Connect MCP is already installed and its existing shared-ngrok configuration works. Stop Garmin's standalone public tunnel first; its local stdio server may remain available.
 

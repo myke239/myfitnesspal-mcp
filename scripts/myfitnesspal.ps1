@@ -4,7 +4,8 @@ param(
     [string]$Command = 'verify',
     [string]$Domain,
     [string]$GarminPython,
-    [string]$GarminData
+    [string]$GarminData,
+    [int]$WhoopPort
 )
 $ErrorActionPreference = 'Stop'
 $ProjectRoot = Split-Path $PSScriptRoot -Parent
@@ -14,7 +15,9 @@ $env:MFP_BROWSER = 'firefox'
 switch ($Command) {
     'gateway' {
         if (-not $GarminPython -or -not $GarminData) { throw 'Provide -GarminPython and -GarminData.' }
-        & $Python -m myfitnesspal_mcp.gateway --garmin-python $GarminPython --garmin-data $GarminData
+        $gatewayArgs = @('--garmin-python', $GarminPython, '--garmin-data', $GarminData)
+        if ($WhoopPort) { $gatewayArgs += @('--whoop-port', [string]$WhoopPort) }
+        & $Python -m myfitnesspal_mcp.gateway @gatewayArgs
     }
     'verify' { & $Python -m myfitnesspal_mcp.cli verify --browser firefox }
     'tunnel-setup' {

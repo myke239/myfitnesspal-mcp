@@ -21,6 +21,11 @@ from .storage import TokenStore, data_directory
 
 PREFIX = "/myfitnesspal"
 MFP_MCP_PATH = "/mcp/myfitnesspal"
+WHOOP_PREFIX = "/mcp/whoop"
+WHOOP_METADATA = {
+    "/.well-known/oauth-authorization-server/mcp/whoop",
+    "/.well-known/oauth-protected-resource/mcp/whoop/",
+}
 MFP_METADATA = {
     "/.well-known/oauth-protected-resource/mcp/myfitnesspal",
     "/.well-known/oauth-authorization-server/myfitnesspal",
@@ -39,9 +44,19 @@ HOP_HEADERS = {
 
 
 def create_gateway(
-    origin, garmin_port=8787, port=8788, directory=None, service=None, transport=None
+    origin,
+    garmin_port=8787,
+    port=8788,
+    directory=None,
+    service=None,
+    transport=None,
+    whoop_port=None,
 ):
     origin = public_origin(origin)
+    if whoop_port is not None and (
+        not 1024 <= whoop_port <= 65535 or whoop_port in {garmin_port, port}
+    ):
+        raise ValueError("WHOOP needs a distinct unprivileged backend port")
     mfp, provider = create_http_app(
         origin,
         port,
@@ -75,10 +90,16 @@ def create_gateway(
         }
         headers["host"] = urlsplit(origin).netloc
         path = request.url.path
-        backend_path = (
-            "/mcp/garmin-connect/" if path == "/mcp/garmin-connect" else path
+        whoop = whoop_port is not None and (
+            path == WHOOP_PREFIX
+            or path.startswith(WHOOP_PREFIX + "/")
+            or path in WHOOP_METADATA
         )
-        url = f"http://127.0.0.1:{garmin_port}{backend_path}"
+        backend_path = "/mcp/garmin-connect/" if path == "/mcp/garmin-connect" else path
+        if whoop and path == WHOOP_PREFIX:
+            backend_path = WHOOP_PREFIX + "/"
+        target_port = whoop_port if whoop else garmin_port
+        url = f"http://127.0.0.1:{target_port}{backend_path}"
         if request.url.query:
             url += "?" + request.url.query
         outgoing = request.app.state.backend.build_request(
@@ -88,7 +109,12 @@ def create_gateway(
             response = await request.app.state.backend.send(outgoing, stream=True)
         except httpx.RequestError:
             return JSONResponse(
-                {"error": "Garmin backend unavailable"}, status_code=503
+                {
+                    "error": "WHOOP backend unavailable"
+                    if whoop
+                    else "Garmin backend unavailable"
+                },
+                status_code=503,
             )
 
         async def stream():
@@ -137,7 +163,14 @@ def create_gateway(
         origin,
         port,
         PREFIX,
-        mcp_paths={"/mcp", "/mcp/garmin-connect", "/mcp/garmin-connect/", MFP_MCP_PATH},
+        mcp_paths={
+            "/mcp",
+            "/mcp/garmin-connect",
+            "/mcp/garmin-connect/",
+            MFP_MCP_PATH,
+            WHOOP_PREFIX,
+            WHOOP_PREFIX + "/",
+        },
         resource=provider.resource,
     ), provider
 
@@ -163,10 +196,20 @@ def main():
     parser.add_argument("--garmin-data", type=Path, required=True)
     parser.add_argument("--port", type=int, default=8788)
     parser.add_argument("--garmin-port", type=int, default=8787)
+    parser.add_argument(
+        "--whoop-port",
+        type=int,
+        help="Forward WHOOP routes to an independently managed loopback backend",
+    )
     args = parser.parse_args()
     garmin_runtime_path = args.garmin_executable or args.garmin_python
     if not garmin_runtime_path.is_file():
         parser.error("Garmin executable or interpreter does not exist")
+    if args.whoop_port is not None and (
+        not 1024 <= args.whoop_port <= 65535
+        or args.whoop_port in {args.port, args.garmin_port}
+    ):
+        parser.error("WHOOP needs a distinct unprivileged backend port")
     if (
         not all(1024 <= p <= 65535 for p in (args.port, args.garmin_port))
         or args.port == args.garmin_port
@@ -176,7 +219,9 @@ def main():
     origin = public_origin(saved["origin"])
     credential = read_garmin_state(args.garmin_data, "remote-tunnel")
     os.environ.setdefault("MFP_BROWSER", "firefox")
-    app, provider = create_gateway(origin, args.garmin_port, args.port)
+    app, provider = create_gateway(
+        origin, args.garmin_port, args.port, whoop_port=args.whoop_port
+    )
     with provider.state():
         pass
     # Fail before opening ngrok if an existing service occupies either port.
@@ -213,7 +258,8 @@ def main():
                     )
                     if (
                         response.status_code == 200
-                        and response.json()["issuer"].rstrip("/") == origin + "/mcp/garmin-connect"
+                        and response.json()["issuer"].rstrip("/")
+                        == origin + "/mcp/garmin-connect"
                     ):
                         break
                 except httpx.RequestError:
@@ -242,11 +288,18 @@ def main():
                     "garmin_pid": child.pid,
                     "garmin_url": origin + "/mcp/garmin-connect",
                     "myfitnesspal_url": origin + MFP_MCP_PATH,
+                    **(
+                        {"whoop_url": origin + WHOOP_PREFIX + "/"}
+                        if args.whoop_port
+                        else {}
+                    ),
                 }
             )
         )
         print("Garmin: " + origin + "/mcp/garmin-connect", flush=True)
         print("MyFitnessPal: " + origin + MFP_MCP_PATH, flush=True)
+        if args.whoop_port:
+            print("WHOOP: " + origin + WHOOP_PREFIX + "/", flush=True)
         config = uvicorn.Config(
             app,
             log_level="warning",
