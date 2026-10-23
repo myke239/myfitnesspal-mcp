@@ -5,7 +5,40 @@ on:
 permissions:
   contents: write
 jobs:
+  windows-installer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build standalone Windows apps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[package]"
+          ./scripts/build_windows.ps1
+      - name: Smoke check setup app
+        run: ./dist/windows/myfitnesspal-setup.exe --smoke-test
+      - name: Install Inno Setup compiler
+        shell: pwsh
+        run: |
+          $compiler = ./scripts/setup_inno.ps1
+          "DAS_KREB_INNO=$compiler" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Build per-user installer
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          New-Item -ItemType Directory -Force -Path dist/installer | Out-Null
+          & $env:DAS_KREB_INNO "/DAppVersion=$version" "/DBundleDir=$PWD\dist\windows" "/DOutputPath=$PWD\dist\installer" scripts/windows-installer.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup compilation failed.' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/installer/*.exe
+          if-no-files-found: error
+
   publish:
+    needs: windows-installer
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,13 +47,17 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install --upgrade build
       - run: python -m build
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: dist
       - name: Assemble release assets
         run: |
           v="${GITHUB_REF_NAME#v}"
           git archive --format=tar.gz --prefix="myfitnesspal-mcp-${v}/" "$GITHUB_SHA" > "dist/myfitnesspal-mcp-${v}-source.tar.gz"
           cp scripts/install.sh dist/install.sh
           cp scripts/install.ps1 dist/install.ps1
-          (cd dist && sha256sum *.whl *.tar.gz install.sh install.ps1 > SHA256SUMS)
+          (cd dist && sha256sum *.whl *.tar.gz *.exe install.sh install.ps1 > SHA256SUMS)
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}

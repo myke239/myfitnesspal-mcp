@@ -3,12 +3,18 @@
 import contextlib
 import json
 import os
+import sys
 import tempfile
 import time
 from pathlib import Path
 
 
 def data_directory():
+    if getattr(sys, "frozen", False) and os.name == "nt":
+        local_app_data = os.environ.get("LOCALAPPDATA")
+        if not local_app_data:
+            raise RuntimeError("LOCALAPPDATA is required for Windows remote state")
+        return Path(local_app_data) / "DasKreb" / "MyFitnessPalMCP" / "remote"
     return Path(__file__).absolute().parents[2] / "work" / "remote"
 
 

@@ -157,13 +157,16 @@ def main():
     for name in ("httpx", "httpcore", "ngrok", "mcp"):
         logging.getLogger(name).setLevel(logging.WARNING)
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--garmin-python", type=Path, required=True)
+    garmin_runtime = parser.add_mutually_exclusive_group(required=True)
+    garmin_runtime.add_argument("--garmin-python", type=Path)
+    garmin_runtime.add_argument("--garmin-executable", type=Path)
     parser.add_argument("--garmin-data", type=Path, required=True)
     parser.add_argument("--port", type=int, default=8788)
     parser.add_argument("--garmin-port", type=int, default=8787)
     args = parser.parse_args()
-    if not args.garmin_python.is_file():
-        parser.error("Garmin interpreter does not exist")
+    garmin_runtime_path = args.garmin_executable or args.garmin_python
+    if not garmin_runtime_path.is_file():
+        parser.error("Garmin executable or interpreter does not exist")
     if (
         not all(1024 <= p <= 65535 for p in (args.port, args.garmin_port))
         or args.port == args.garmin_port
@@ -181,17 +184,17 @@ def main():
         with socket.socket() as probe:
             probe.bind(("127.0.0.1", port))
     env = dict(os.environ, GARMIN_MCP_DATA_DIR=str(args.garmin_data.absolute()))
-    child = subprocess.Popen(
-        [
+    if args.garmin_executable:
+        garmin_command = [str(args.garmin_executable), "remote-serve"]
+    else:
+        garmin_command = [
             str(args.garmin_python),
             "-m",
             "garmin_connect_mcp.remote",
             "serve",
-            "--public-url",
-            origin,
-            "--port",
-            str(args.garmin_port),
-        ],
+        ]
+    child = subprocess.Popen(
+        [*garmin_command, "--public-url", origin, "--port", str(args.garmin_port)],
         env=env,
         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
     )

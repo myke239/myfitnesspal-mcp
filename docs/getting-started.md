@@ -1,79 +1,45 @@
-# Step-by-step installation
+# Install MyFitnessPal MCP
 
-This guide installs the latest published MyFitnessPal MCP release on Windows, macOS, or Linux. It does not require cloning the repository. You need Python 3.11+, an MCP client, and Firefox signed in to MyFitnessPal for local authentication.
+## Windows
 
-## 1. Download the installer
+1. Install and sign in to the [Codex desktop app](https://developers.openai.com/codex/quickstart), and install Firefox, Chrome, or Edge.
+2. Download and open [MyFitnessPal MCP Setup](https://github.com/myke239/myfitnesspal-mcp/releases/latest/download/myfitnesspal-mcp-windows-x64-setup.exe). If Windows asks, choose **More info → Run anyway**.
+3. Click **Begin Install** in the Windows installer.
 
-Open [Releases](https://github.com/myke239/myfitnesspal-mcp/releases/latest). In **Assets**, download `install.ps1` on Windows or `install.sh` on macOS/Linux. Optionally download `SHA256SUMS` and compare the installer or wheel checksum before running it.
+   ![Windows installer ready-to-install screen](images/windows-installer-welcome.png)
 
-![Release page showing the latest release and platform installer assets](images/release-assets.svg)
+4. When the setup app opens, click **Begin Install**.
 
-## 2. Run it
+   ![MyFitnessPal MCP setup welcome screen](images/windows-setup-welcome.png)
 
-### Windows 10/11
+5. Keep the browser where you use MyFitnessPal selected, then click **Open MyFitnessPal**.
 
-Open PowerShell (not as Administrator), go to Downloads, and run:
+   ![Choose the browser used for MyFitnessPal](images/windows-setup-browser.png)
 
-```powershell
-Set-ExecutionPolicy -Scope Process Bypass
-.\install.ps1
-```
+6. Sign in in the browser. Return to setup and click **I’m signed in — Continue**.
 
-The script installs into `%LOCALAPPDATA%\MyFitnessPalMCP` and creates an isolated Python environment without changing machine-wide Python or client configuration. It checks the versions registered with the Windows Python launcher and selects the newest Python 3.11 or newer. This also works when an older Python is the default for `py -3`. Use the printed verification command. If no supported version is found, install Python 3.11+ from [python.org](https://www.python.org/downloads/windows/) with the Python launcher enabled, then rerun the installer. If you prefer a specific interpreter, set `$env:PYTHON` to its full executable path before running `install.ps1`.
+   ![MyFitnessPal sign-in confirmation step](images/windows-setup-signin.png)
 
-### macOS
+7. When you see **You’re all set**, close and reopen Codex and start a new chat.
 
-Open Terminal, go to Downloads, and run:
+**Installed correctly:** MyFitnessPal appears in Codex’s plugin list. In a new chat, ask: “Show my MyFitnessPal food diary for yesterday.”
 
-```sh
-chmod +x ./install.sh
-./install.sh
-```
+The setup app checks your browser session and installs the plugin automatically. It never asks for your MyFitnessPal password. If Codex is not installed yet, install it and open **MyFitnessPal MCP Setup** from the Start menu.
 
-The script installs into `~/.local/share/myfitnesspal-mcp`. If Python 3 is missing, install Python 3.11+ from [python.org](https://www.python.org/downloads/macos/) or your preferred package manager, then rerun.
+## macOS or Linux
 
-### Linux
+1. Install Python 3.11 or newer and Firefox, then sign in to MyFitnessPal in Firefox.
+2. Download `install.sh` from [the latest release](https://github.com/myke239/myfitnesspal-mcp/releases/latest).
+3. In Terminal, go to Downloads and run:
 
-Open a terminal in Downloads and run:
+   ```sh
+   chmod +x ./install.sh && ./install.sh
+   ```
 
-```sh
-chmod +x ./install.sh
-./install.sh
-```
+4. Follow the printed instructions to verify your browser session and add the server to your MCP client.
 
-The script installs into `~/.local/share/myfitnesspal-mcp`. Install Python 3.11+ and its `venv` support using your distribution's package manager if needed.
+**Installed correctly:** ask your MCP client to show your MyFitnessPal food diary for yesterday.
 
-![Installer terminal and client configuration steps](images/installer-steps.svg)
+## Shared ngrok setup
 
-## 3. Sign in and verify
-
-Sign in to MyFitnessPal in Firefox. Run the verify command printed by the installer. On macOS/Linux, it is typically:
-
-```sh
-~/.local/share/myfitnesspal-mcp/myfitnesspal-mcp verify --browser firefox
-```
-
-On Windows, use the full PowerShell command printed by the installer; it invokes the installed environment's Python directly. You can select Edge or Chrome with `--browser edge` or `--browser chrome`. Firefox is recommended on Windows because Chrome cookie decryption may require administrative access. Authentication is lazy: server discovery can work before you verify, but account tools need a valid browser session.
-
-Alternatively set `MFP_COOKIE_FILE` to a local Netscape-format cookie export. Protect that file and never commit or share it.
-
-## 4. Add the server to your MCP client
-
-Choose **local / stdio MCP server** in your client and add the configuration printed by the installer. It includes the absolute Python executable inside the new isolated environment, arguments `-m myfitnesspal_mcp.cli serve`, and `MFP_BROWSER=firefox`. Save and restart the client or reload its MCP servers. Do not copy a sample path literally: use the actual path printed on your machine.
-
-![Example MCP client server entry with command, arguments, and browser setting](images/client-config.svg)
-
-For Codex plugin users, the installer also provides the repository plugin path and instructions to add it using the client’s plugin workflow. The plugin's checked-in MCP file is a development template; use the generated local configuration so it points to your installed environment.
-
-## 5. Confirm it works
-
-Ask your MCP client to call `connection_status`, then request a diary read for a specific date. If no diary entries appear, check the date, logged-in Firefox account, and `verify` result. A successful offline test does not prove the MyFitnessPal website is currently compatible.
-
-## Remote ChatGPT and mobile
-
-For remote access, use the [shared ngrok guide](shared-ngrok.md). It keeps Garmin and MyFitnessPal on one HTTPS hostname and routes them by distinct URL paths. The combined gateway currently runs on Windows because its encrypted OAuth state uses Windows DPAPI. Your computer must stay awake, Firefox must remain signed in, and the local gateway must be running. Local stdio setup does not configure remote ChatGPT access.
-
-## Update or uninstall
-
-Run the installer again to upgrade in place. To remove the installation, stop the server and remove `%LOCALAPPDATA%\MyFitnessPalMCP` on Windows or `~/.local/share/myfitnesspal-mcp` on macOS/Linux. Remove any client configuration entry you added. User-specific remote grants and state are separate; use the connector's documented reset command before removing remote state if you want to revoke it.
-
+To use Garmin Connect and MyFitnessPal through one ngrok HTTPS address, follow [Shared ngrok setup](shared-ngrok.md). Keep the same HTTPS hostname and use `/mcp/garmin-connect` for Garmin and `/mcp/myfitnesspal` for MyFitnessPal.

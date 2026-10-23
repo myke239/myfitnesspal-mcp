@@ -12,13 +12,10 @@ A local-first MCP server for MyFitnessPal. Connect through stdio on Windows, mac
 
 ## Quick start
 
-1. Install Python 3.11 or newer.
-2. Download the installer for your operating system from [the latest release](https://github.com/myke239/myfitnesspal-mcp/releases/latest): `install.ps1` for Windows, or `install.sh` for macOS/Linux.
-3. Run the installer. It creates an isolated environment, installs the signed-off release wheel, and prints the client setup instructions.
-4. Sign in to MyFitnessPal in Firefox, then run the verify command printed by the installer.
-5. Add the printed MCP server configuration to your client and restart/reload its tools.
+1. Download the latest release for your platform: the Windows setup app, or `install.sh` for macOS/Linux.
+2. Run it and follow the short on-screen steps. Windows users do not need Python or a terminal.
 
-See the illustrated [step-by-step installation guide](docs/getting-started.md). No password is stored by this project. Your browser session cookies are read locally; exported cookie files must be protected like passwords.
+See the [quick installation guide](docs/getting-started.md). No password is stored by this project; browser session cookies are read locally.
 
 ## What it can do
 
@@ -35,7 +32,7 @@ You can run Garmin and MyFitnessPal through the **same ngrok HTTPS hostname**. G
 
 ## Platforms and releases
 
-The local stdio connector and installer support Windows, macOS, and Linux with Python 3.11+. Release artifacts include OS-specific installer scripts, a wheel, source archives, and SHA-256 checksums. Browser cookie access depends on supported browsers and OS keychain protections. The combined Garmin + MyFitnessPal HTTPS gateway currently uses Windows DPAPI and its supplied PowerShell launcher, so remote ChatGPT/mobile setup is Windows-hosted today. Current bundled plugin metadata is a Codex plugin; other clients can use the printed stdio configuration.
+The local connector supports Windows, macOS, and Linux. Windows releases include a guided setup app; macOS/Linux use the install script and require Python 3.11+. Browser cookie access depends on supported browsers and OS keychain protections. The combined Garmin + MyFitnessPal HTTPS gateway currently uses Windows DPAPI and its supplied PowerShell launcher, so remote ChatGPT/mobile setup is Windows-hosted today.
 
 ## Development
 

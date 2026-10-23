@@ -1,0 +1,20 @@
+{
+  "name": "das-kreb-myfitnesspal",
+  "interface": {
+    "displayName": "MyFitnessPal MCP"
+  },
+  "plugins": [
+    {
+      "name": "myfitnesspal",
+      "source": {
+        "source": "local",
+        "path": "./plugins/myfitnesspal"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -13,27 +13,21 @@ Replace only `YOUR-NGROK-HOST` with the current hostname shown by ngrok. Keep ea
 
 This gateway currently runs on Windows. Install MyFitnessPal with the [release installer](getting-started.md), and make sure Garmin Connect MCP is already installed and its existing shared-ngrok configuration works. Stop Garmin's standalone public tunnel first; its local stdio server may remain available.
 
-Open PowerShell and set the executable and data paths for your existing Garmin installation. The example below uses the MyFitnessPal release install location:
+Open PowerShell and set the executable and data paths for your existing Garmin installation. Replace the Garmin executable path with the `garmin-connect.exe` inside your installed Garmin MCP version folder:
 
 ```powershell
-$MfpPython = "$env:LOCALAPPDATA\MyFitnessPalMCP\venv\Scripts\python.exe"
-$GarminPython = 'D:\path\to\garmin\.venv\Scripts\python.exe'
+$MfpRuntime = "$env:LOCALAPPDATA\MyFitnessPalMCP\myfitnesspal-mcp.exe"
+$GarminExecutable = 'D:\path\to\garmin\garmin-connect.exe'
 $GarminData = 'D:\developer\.garmin-connect-mcp'
-```
-
-Install the gateway's optional packages into the isolated MyFitnessPal environment:
-
-```powershell
-& $MfpPython -m pip install 'ngrok==1.7.0' 'pywin32>=310'
 ```
 
 Start the combined gateway:
 
 ```powershell
-& $MfpPython -m myfitnesspal_mcp.gateway --garmin-python $GarminPython --garmin-data $GarminData
+& $MfpRuntime gateway --garmin-executable $GarminExecutable --garmin-data $GarminData
 ```
 
-The gateway runs Garmin's private HTTP backend on loopback port 8787, the shared listener on loopback port 8788, and opens a single ngrok endpoint. It reads the existing ngrok credential locally without changing it. If either port is already occupied, startup fails rather than silently choosing another port. MyFitnessPal OAuth state is encrypted in the installed environment's ignored `work/remote` directory.
+The gateway runs Garmin's private HTTP backend on loopback port 8787, the shared listener on loopback port 8788, and opens a single ngrok endpoint. It reads the existing ngrok credential locally without changing it. If either port is already occupied, startup fails rather than silently choosing another port. MyFitnessPal OAuth state is encrypted at `%LOCALAPPDATA%\DasKreb\MyFitnessPalMCP\remote`.
 
 Startup prints two full MCP URLs. Use the Garmin URL ending `/mcp/garmin-connect` for Garmin and the MyFitnessPal URL ending `/mcp/myfitnesspal` for MyFitnessPal. Preserve the same current ngrok hostname in both URLs.
 
@@ -50,7 +44,7 @@ For read-only access, request only `myfitnesspal:read`. To expand a prior read-o
 The MyFitnessPal protected resource URL changes from `/myfitnesspal/mcp` to `/mcp/myfitnesspal` with this release. Before starting the updated gateway, clear its old MyFitnessPal OAuth state:
 
 ```powershell
-& $MfpPython -m myfitnesspal_mcp.remote reset
+& $MfpRuntime remote reset
 ```
 
 Type `RESET` when prompted, then remove and recreate the MyFitnessPal connection in ChatGPT using `/mcp/myfitnesspal`. Garmin's grants and connection remain unchanged.
