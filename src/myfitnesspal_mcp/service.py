@@ -140,8 +140,11 @@ def nutrition(values: dict) -> dict:
 
 def create_client():
     """Load only explicit cookies or a single selected browser's MFP cookies."""
+    import uuid
+
     import browser_cookie3
     import myfitnesspal
+    import requests
 
     cookie_file = os.environ.get("MFP_COOKIE_FILE")
     if cookie_file:
@@ -184,7 +187,23 @@ def create_client():
     # before that happens; never enable upstream request logging.
     class BoundedClient(myfitnesspal.Client):
         def __init__(self, **kwargs):
-            super().__init__(**kwargs)
+            # myfitnesspal 2.1.2 wraps requests in cloudscraper, which causes
+            # MyFitnessPal's auth_token endpoint to return 403. The upstream
+            # fix is to use a plain requests.Session; initialize the pinned
+            # client's small state surface here to apply that fix locally.
+            self._client_instance_id = uuid.uuid4()
+            self._request_counter = 0
+            self._log_requests_to = None
+            self.unit_aware = kwargs.get("unit_aware", False)
+            self.session = requests.Session()
+            self.session.headers.update(
+                {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/88.0.4324.104 Safari/537.36"
+                }
+            )
+            self.session.cookies.update(kwargs["cookiejar"])
             original = self.session.request
 
             def request(method, url, **kwargs):
@@ -196,6 +215,11 @@ def create_client():
                 return original(method, url, **kwargs)
 
             self.session.request = request
+
+            # Match Client.__init__ after session setup so all SDK calls use
+            # the plain, bounded session above.
+            self._auth_data = self._get_auth_data()
+            self._user_metadata = self._get_user_metadata()
 
         def _get_request_for_url(self, *args, **kwargs):
             kwargs.setdefault("timeout", (10, 30))

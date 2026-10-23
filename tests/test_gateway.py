@@ -100,10 +100,10 @@ def test_shared_gateway_oauth_and_routing(tmp_path, monkeypatch):
         assert redirect.status_code == 302, redirect.text
         assert redirect.headers["location"].startswith(ORIGIN + PREFIX + "/consent?")
         ticket = parse_qs(urlsplit(redirect.headers["location"]).query)["ticket"][0]
-        assert (
-            'action="/myfitnesspal/consent"'
-            in client.get(redirect.headers["location"]).text
-        )
+        consent = client.get(redirect.headers["location"]).text
+        assert "connection code" in consent.lower()
+        assert ticket in consent
+        assert 'action="/myfitnesspal/consent"' in consent
         with provider.state() as state:
             state["pending"][ticket]["approved"] = True
         redirect = client.get(PREFIX + "/consent", params={"ticket": ticket})

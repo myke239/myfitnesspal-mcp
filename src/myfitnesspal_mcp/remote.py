@@ -210,6 +210,21 @@ class OwnerProvider:
                 )
             if not pending["approved"]:
                 # No login cookie, secret, password or browser approval can grant access.
+                if os.name == "nt":
+                    return HTMLResponse(
+                        "<h1>Review your MyFitnessPal connection</h1>"
+                        "<p>Return to MyFitnessPal MCP Setup and enter this connection code. "
+                        "Review the requested access and approve it on your PC.</p>"
+                        "<p>Connection code</p><pre><code>"
+                        + html.escape(ticket)
+                        + "</code></pre><p>This code expires in five minutes."
+                        " Do not share it with anyone.</p>"
+                        '<form method="get" action="'
+                        + self.prefix
+                        + '/consent"><input type="hidden" name="ticket" value="'
+                        + html.escape(ticket, quote=True)
+                        + '"><button>Continue</button></form>'
+                    )
                 return HTMLResponse(
                     "<h1>Approve your MyFitnessPal connection on your PC</h1>"
                     "<p>This gives ChatGPT access to your MyFitnessPal account with scopes: "
