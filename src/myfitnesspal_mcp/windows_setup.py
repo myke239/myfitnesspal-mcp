@@ -13,7 +13,7 @@ import webbrowser
 from pathlib import Path
 from tkinter import ttk
 
-URL = "https://www.myfitnesspal.com/"
+URL = "https://www.myfitnesspal.com/account/login?callbackUrl=https%3A%2F%2Fwww.myfitnesspal.com%2Fmessages%2Fnew%2Flogin"
 MARKETPLACE = "das-kreb-myfitnesspal"
 PLUGIN = "myfitnesspal"
 CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
