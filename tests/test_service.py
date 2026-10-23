@@ -141,3 +141,38 @@ def test_auth_verification_reports_safe_failure_category(failure, expected):
         service_instance.call(fail)
     assert expected in str(error.value)
     assert "unsafe details" not in str(error.value)
+
+
+def test_create_client_uses_plain_requests_session(monkeypatch):
+    from http.cookiejar import CookieJar
+
+    import myfitnesspal
+    import requests
+
+    monkeypatch.setattr(
+        service, "_load_browser_cookies", lambda *_args: CookieJar()
+    )
+    monkeypatch.setenv("MFP_BROWSER", "firefox")
+    monkeypatch.delenv("MFP_COOKIE_FILE", raising=False)
+    monkeypatch.setattr(
+        myfitnesspal.Client,
+        "_get_auth_data",
+        lambda _self: {"access_token": "test", "user_id": "test"},
+    )
+    monkeypatch.setattr(
+        myfitnesspal.Client,
+        "_get_user_metadata",
+        lambda _self: {"username": "test"},
+    )
+
+    def cloudscraper_must_not_be_used(*_args, **_kwargs):
+        pytest.fail("Auth verification must use a plain requests.Session")
+
+    monkeypatch.setattr(
+        myfitnesspal.client.cloudscraper,
+        "create_scraper",
+        cloudscraper_must_not_be_used,
+    )
+    client = service.create_client()
+    assert isinstance(client.session, requests.Session)
+    assert client._auth_data["user_id"] == "test"
