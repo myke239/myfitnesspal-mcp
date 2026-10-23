@@ -7,6 +7,9 @@ permissions:
 jobs:
   windows-installer:
     runs-on: windows-latest
+    env:
+      WINDOWS_SIGNING_PFX_BASE64: ${{ secrets.WINDOWS_SIGNING_PFX_BASE64 }}
+      WINDOWS_SIGNING_PFX_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PFX_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -17,6 +20,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[package]"
           ./scripts/build_windows.ps1
+      - name: Sign Windows apps when a publisher certificate is configured
+        shell: pwsh
+        run: ./scripts/sign_windows.ps1 -Path (Get-ChildItem dist/windows/*.exe | ForEach-Object FullName)
       - name: Smoke check setup app
         run: ./dist/windows/myfitnesspal-setup.exe --smoke-test
       - name: Install Inno Setup compiler
@@ -31,6 +37,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist/installer | Out-Null
           & $env:DAS_KREB_INNO "/DAppVersion=$version" "/DBundleDir=$PWD\dist\windows" "/DOutputPath=$PWD\dist\installer" scripts/windows-installer.iss
           if ($LASTEXITCODE -ne 0) { throw 'Inno Setup compilation failed.' }
+          ./scripts/sign_windows.ps1 -Path (Get-ChildItem dist/installer/*.exe | ForEach-Object FullName)
       - uses: actions/upload-artifact@v4
         with:
           name: windows-installer

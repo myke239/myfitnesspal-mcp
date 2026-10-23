@@ -101,6 +101,25 @@ def remove_plugin(codex: str) -> None:
     _run_codex(codex, ["plugin", "marketplace", "remove", MARKETPLACE])
 
 
+def verification_failure(browser: str, output: str) -> str:
+    """Turn the verifier's sanitized error into a useful setup instruction."""
+    detail = output.strip()
+    if browser.lower() in {"chrome", "edge"}:
+        advice = (
+            f"Windows may be blocking access to {browser}'s saved cookies. "
+            "If you are signed in there, try Firefox: sign in to MyFitnessPal "
+            "in Firefox, return here, choose Firefox, and continue."
+        )
+    else:
+        advice = (
+            f"Make sure you are signed in to MyFitnessPal in the selected "
+            f"{browser} profile, then try again."
+        )
+    if detail:
+        return f"Could not verify your sign-in in {browser}.\n\n{detail}\n\n{advice}"
+    return f"Could not verify your sign-in in {browser}. {advice}"
+
+
 class SetupWizard:
     def __init__(self, root: tk.Tk, smoke_test: bool = False):
         self.root = root
@@ -298,7 +317,9 @@ class SetupWizard:
                 )
                 if result.returncode:
                     raise RuntimeError(
-                        "No signed-in MyFitnessPal session was found. Sign in in your browser and try again."
+                        verification_failure(
+                            self.browser.get(), result.stderr or result.stdout
+                        )
                     )
                 prepare_and_install(self.codex, self.app_dir, self.browser.get())
             except Exception as error:

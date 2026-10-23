@@ -34,6 +34,8 @@ You can run Garmin and MyFitnessPal through the **same ngrok HTTPS hostname**. G
 
 The local connector supports Windows, macOS, and Linux. Windows releases include a guided setup app; macOS/Linux use the install script and require Python 3.11+. Browser cookie access depends on supported browsers and OS keychain protections. The combined Garmin + MyFitnessPal HTTPS gateway currently uses Windows DPAPI and its supplied PowerShell launcher, so remote ChatGPT/mobile setup is Windows-hosted today.
 
+Release maintainers can configure Windows Authenticode signing using the steps in [Release signing](docs/releasing.md).
+
 ## Development
 
 ```bash
