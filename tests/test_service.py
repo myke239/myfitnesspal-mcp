@@ -1,8 +1,10 @@
 from datetime import date
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
+from myfitnesspal_mcp import service
 from myfitnesspal_mcp.service import AccessError, Service, date_range, parse_date
 
 
@@ -73,3 +75,60 @@ def test_upstream_errors_are_sanitized_and_reset_client():
         service.connection_status()
     assert "secret" not in str(error.value)
     assert service._client is None
+
+
+def test_windows_firefox_profiles_load_all_cookie_databases(tmp_path, monkeypatch):
+    profiles = tmp_path / "Mozilla" / "Firefox" / "Profiles"
+    first = profiles / "default-release" / "cookies.sqlite"
+    second = profiles / "daily-use" / "cookies.sqlite"
+    first.parent.mkdir(parents=True)
+    second.parent.mkdir(parents=True)
+    first.touch()
+    second.touch()
+    monkeypatch.setattr(service.sys, "platform", "win32")
+    monkeypatch.setenv("APPDATA", str(tmp_path))
+
+    class Jar:
+        def __init__(self, cookies):
+            self.cookies = cookies
+
+        def __iter__(self):
+            return iter(self.cookies)
+
+        def set_cookie(self, cookie):
+            self.cookies.append(cookie)
+
+    loaded = []
+
+    def loader(cookie_file, domain_name):
+        loaded.append(Path(cookie_file))
+        return Jar([cookie_file])
+
+    result = service._load_browser_cookies(loader, "firefox", "myfitnesspal.com")
+    assert set(loaded) == {first, second}
+    assert set(result.cookies) == {str(first), str(second)}
+
+
+@pytest.mark.parametrize(
+    ("failure", "expected"),
+    [
+        (type("MyfitnesspalLoginError", (Exception,), {})("unsafe details"), "rejected"),
+        (type("HttpError", (Exception,), {"status_code": 403})("unsafe details"), "HTTP 403"),
+        (
+            type("MyfitnesspalRequestFailed", (Exception,), {})(
+                "Unable to fetch token: status code: 403"
+            ),
+            "HTTP 403",
+        ),
+    ],
+)
+def test_auth_verification_reports_safe_failure_category(failure, expected):
+    service_instance = Service(lambda: SimpleNamespace())
+
+    def fail(_client):
+        raise failure
+
+    with pytest.raises(AccessError) as error:
+        service_instance.call(fail)
+    assert expected in str(error.value)
+    assert "unsafe details" not in str(error.value)
