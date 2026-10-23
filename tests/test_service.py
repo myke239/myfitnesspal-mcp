@@ -81,10 +81,19 @@ def test_windows_firefox_profiles_load_all_cookie_databases(tmp_path, monkeypatc
     profiles = tmp_path / "Mozilla" / "Firefox" / "Profiles"
     first = profiles / "default-release" / "cookies.sqlite"
     second = profiles / "daily-use" / "cookies.sqlite"
+    custom = tmp_path / "custom-firefox-profile" / "cookies.sqlite"
     first.parent.mkdir(parents=True)
     second.parent.mkdir(parents=True)
+    custom.parent.mkdir(parents=True)
     first.touch()
     second.touch()
+    custom.touch()
+    firefox_root = tmp_path / "Mozilla" / "Firefox"
+    firefox_root.mkdir(parents=True, exist_ok=True)
+    (firefox_root / "profiles.ini").write_text(
+        f"[Profile0]\nName=Custom\nIsRelative=0\nPath={custom.parent}\n",
+        encoding="utf-8",
+    )
     monkeypatch.setattr(service.sys, "platform", "win32")
     monkeypatch.setenv("APPDATA", str(tmp_path))
 
@@ -105,8 +114,8 @@ def test_windows_firefox_profiles_load_all_cookie_databases(tmp_path, monkeypatc
         return Jar([cookie_file])
 
     result = service._load_browser_cookies(loader, "firefox", "myfitnesspal.com")
-    assert set(loaded) == {first, second}
-    assert set(result.cookies) == {str(first), str(second)}
+    assert set(loaded) == {first, second, custom}
+    assert set(result.cookies) == {str(first), str(second), str(custom)}
 
 
 @pytest.mark.parametrize(

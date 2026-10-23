@@ -1,5 +1,6 @@
 """Bounded reads and JSON normalization, independent of MCP transport."""
 
+import configparser
 import math
 import os
 import re
@@ -49,8 +50,30 @@ def _browser_cookie_profiles(browser: str) -> list[Path]:
     roaming = Path(os.environ.get("APPDATA", ""))
     local = Path(os.environ.get("LOCALAPPDATA", ""))
     if browser == "firefox":
-        roots = [roaming / "Mozilla" / "Firefox" / "Profiles"]
-        return [p for root in roots for p in root.glob("*/cookies.sqlite") if p.is_file()]
+        firefox_root = roaming / "Mozilla" / "Firefox"
+        profile_dirs = list((firefox_root / "Profiles").glob("*"))
+        profiles_ini = firefox_root / "profiles.ini"
+        if profiles_ini.is_file():
+            profiles = configparser.ConfigParser()
+            profiles.read(profiles_ini, encoding="utf-8")
+            for section in profiles.sections():
+                if not section.startswith("Profile"):
+                    continue
+                profile_path = profiles[section].get("Path")
+                if not profile_path:
+                    continue
+                path = Path(profile_path)
+                if profiles[section].getboolean("IsRelative", fallback=True):
+                    path = firefox_root / path
+                profile_dirs.append(path)
+        return list(
+            dict.fromkeys(
+                cookie_db
+                for profile in profile_dirs
+                for cookie_db in [profile / "cookies.sqlite"]
+                if cookie_db.is_file()
+            )
+        )
     vendor = {"chrome": "Google\\Chrome", "edge": "Microsoft\\Edge"}.get(browser)
     if not vendor:
         return []

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "myfitnesspal-mcp"
-version = "0.6.2"
+version = "0.6.3"
 license-files = ["THIRD_PARTY_NOTICES.md"]
 description = "Local MyFitnessPal diary and nutrition MCP tools"
 readme = "README.md"
