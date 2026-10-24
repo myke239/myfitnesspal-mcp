@@ -327,7 +327,7 @@ class Backend:
                     os.kill(int(running["pid"]), 0)
                     self.server_url = running["myfitnesspal_url"]
                     parts = urlsplit(self.server_url)
-                    self.origin = public_origin(parts.scheme + "://" + parts.netloc)
+                    self.origin = public_origin(f"{parts.scheme}://{parts.netloc}")
                     return self.check_server(self.origin)
             except (OSError, ValueError, KeyError, json.JSONDecodeError):
                 status.clear()
@@ -336,6 +336,19 @@ class Backend:
         marker = "MyFitnessPal MCP shared gateway"
         if startup.exists() and marker not in startup.read_text(encoding="utf-8"):
             raise RuntimeError("A different startup app already uses the MyFitnessPal gateway entry. Remove it before continuing.")
+
+        # The packaged Windows executable may hand off to a detached server
+        # process, so its DPAPI status file is not always available to a later
+        # installer run. Reuse a gateway that already answers on Garmin's saved
+        # HTTPS origin instead of starting a second copy on occupied ports.
+        try:
+            saved = json.loads(TokenStore(garmin_data / "remote-oauth").load())
+            origin = public_origin(saved["origin"])
+            url = self.check_server(origin)
+            self._install_startup(startup, marker, runtime, garmin_data)
+            return url
+        except (OSError, ValueError, KeyError, json.JSONDecodeError, RuntimeError):
+            pass
 
         stop = subprocess.run(
             [str(runtime), "background-stop"], capture_output=True, timeout=40,
@@ -359,17 +372,23 @@ class Backend:
             env=env, creationflags=DETACHED,
         )
         try:
+            exited_at = None
             for _ in range(120):
-                if process.poll() is not None:
-                    raise RuntimeError("The shared MCP server could not start. Check the saved ngrok address and try again.")
                 if status.exists():
                     running = json.loads(status.load())
                     self.server_url = running.get("myfitnesspal_url", "")
                     if self.server_url:
-                        self.origin = public_origin(self.server_url)
+                        parts = urlsplit(self.server_url)
+                        self.origin = public_origin(f"{parts.scheme}://{parts.netloc}")
                         self.check_server(self.origin)
                         self._install_startup(startup, marker, runtime, garmin_data)
                         return self.server_url
+                if process.poll() is not None:
+                    exited_at = exited_at or time.monotonic()
+                    if time.monotonic() - exited_at >= 10:
+                        raise RuntimeError("The shared MCP server could not start. Check the saved ngrok address and try again.")
+                else:
+                    exited_at = None
                 time.sleep(0.5)
             raise RuntimeError("The shared MCP server is still starting. Wait a moment, then try again.")
         except Exception:
